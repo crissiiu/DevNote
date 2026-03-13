@@ -23,6 +23,9 @@
       ],
       "@/auth/*": [
         "src/modules/auth/*"
+      ],
+      "@/notes/*": [
+        "src/modules/notes/*"
       ]
     }
   }
