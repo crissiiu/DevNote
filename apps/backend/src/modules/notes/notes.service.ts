@@ -1,5 +1,5 @@
 import { PrismaService } from "@/common/prisma/prisma.service";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { CreateNoteDto } from "@/notes/dto/create-note.dto";
 import { QueryNotesDto } from "@/notes/dto/query-notes.dto";
 import { UpdateNoteDto } from "@/notes/dto/update-note.dto";
@@ -21,7 +21,7 @@ export class NotesService {
         userId,
         title: createNoteDto.title,
         content: createNoteDto.content,
-        isPinned: createNoteDto.isPinned ?? false,
+        isPinned: createNoteDto.isPinned ?? false,  
         isArchived: createNoteDto.isArchived ?? false,
       },
     });
@@ -30,6 +30,58 @@ export class NotesService {
       message: "Note created successfully",
       note,
     };
+  }
+
+  /**
+   * Gắn một Tag (Nhãn) vào một Note (Ghi chú).
+   * Kỹ thuật:
+   * 1. Kiểm tra quyền sở hữu (Note và Tag có thuộc về User này không).
+   * 2. Kiểm tra xem NodeTag (quan hệ N-N) này đã tồn tại hay chưa để tránh lỗi vi phạm ràng buộc Unique.
+   * LỖI ĐÃ SỬA: Bổ sung logic kiểm tra Tag có tồn tại không và vi phạm Unique constraint.
+   */
+  async addTagToNote(userId: string, noteId: string, tagId: string) {
+    // Chạy song song 2 promises để kiểm tra quyền sở hữu của Note và Tag (Tối ưu hóa tốc độ)
+    const [note, tag] = await Promise.all([
+      this.prisma.note.findFirst({ where: { id: noteId, userId } }),
+      this.prisma.tag.findFirst({ where: { id: tagId, userId } }),
+    ]);
+
+    // Báo lỗi 404 nếu không tìm thấy Note
+    if (!note) {
+      throw new NotFoundException("Note not found"); // Sửa lỗi đánh máy: "Note note found" -> "Note not found"
+    }
+
+    // Báo lỗi 404 nếu không tìm thấy Tag (ví dụ: gửi id bậy bạ của user khác)
+    if (!tag) {
+      throw new NotFoundException("Tag not found");
+    }
+
+    // Kiểm tra chống trùng lặp: Nếu Tag đã được liên kết với Note rồi thì không làm gì hoặc báo lỗi
+    const existingRelation = await this.prisma.noteTag.findUnique({
+      where: {
+        noteId_tagId: {
+          noteId,
+          tagId,
+        }
+      }
+    });
+
+    if (existingRelation) {
+      throw new BadRequestException("Tag is already added to this note");
+    }
+
+    // Tiến hành tạo bản ghi ở bảng trung gian (NoteTag)
+    const relation = await this.prisma.noteTag.create({
+      data: {
+        noteId,
+        tagId,
+      },
+    });
+
+    return {
+      message: "Tag added to note successfully",
+      relation,
+    }
   }
 
   /**
@@ -71,7 +123,7 @@ export class NotesService {
         skip,
         take: limit,
         orderBy: {
-          [query.sortBy ?? "updatedAt"]: query.sortOrder ?? "desc",
+          [query.sortBy ?? "updatedAt"]: query.sortOrder ?? "desc", 
         },
       }),
       this.prisma.note.count({ where }),
