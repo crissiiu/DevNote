@@ -180,6 +180,14 @@ export class NotesService {
       throw new NotFoundException("Note not found");
     }
 
+    await this.prisma.noteRevision.create({
+      data: {
+        noteId: id,
+        title: existingNote.title,
+        content: existingNote.content,
+      },
+    });
+
     // 2. Thực hiện cập nhật
     const note = await this.prisma.note.update({
       where: { id },
@@ -190,6 +198,62 @@ export class NotesService {
       message: "Note updated successfully",
       note,
     };
+  }
+
+  async findRevisions(userId: string, noteId: string) {
+    const note =  await this.prisma.note.findFirst({
+      where: {
+        id: noteId,
+        userId
+      },
+    });
+
+    if(!note) {
+      throw new NotFoundException("Note not found");
+    }
+
+    const revision = await this.prisma.noteRevision.findMany({
+      where: {
+        noteId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return {
+      mesage: "Revisions fetched successfully",
+      data: revision,
+    }
+  }
+
+  async findRevisionDetail(userId: string, noteId: string, revisionId: string){
+    const note =  await this.prisma.note.findFirst({
+      where: {
+        id: noteId,
+        userId
+      },
+    });
+
+    if(!note) {
+      throw new NotFoundException("Note not found");
+    }
+
+    const revision = await this.prisma.noteRevision.findFirst({
+      where: {
+        id: revisionId,
+        noteId
+      },
+    });
+
+    if(!revision) {
+      throw new NotFoundException("Revision not found");
+    }
+
+    return {
+      message: "Revision fetched successfully",
+      revision,
+    }
   }
 
   /**

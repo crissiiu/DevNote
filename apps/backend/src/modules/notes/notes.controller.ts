@@ -71,6 +71,32 @@ export class NotesController {
   }
 
   /**
+   * Lấy danh sách bản chỉnh sửa note
+   * [HttpGet(":id/revisions")]
+   */
+
+  @Get(":id/revision")
+  async findRevisions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param(":id") id: string,
+  ) {
+    return this.notesService.findRevisions(user.id, id);
+  }
+
+  /**
+   * Lấy chi tiết một bản chỉnh sửa note
+   * [HttpGet(":id/revision/:revisionId")]
+   */
+  @Get(":id/revision/:revisionId")
+  async findRevisionDetail(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param(":id") noteId: string,
+    @Param(":revisionId") revisionId: string,
+  ) {
+    return this.notesService.findRevisionDetail(user.id, noteId, revisionId);
+  }
+
+  /**
    * Lấy chi tiết một ghi chú.
    * [HttpGet("{id}")]
    */

@@ -32,6 +32,7 @@ model Note {
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   noteTags NoteTag[]
+  revisions     NoteRevision[]
 
   @@index([userId])
   @@index([userId, isPinned])
@@ -64,4 +65,18 @@ model NoteTag {
   @@id([noteId, tagId])
   @@index([tagId])
   @@map("note_tags")
+}
+
+model NoteRevision {
+  id        String   @id @default(uuid())
+  noteId    String   @map("note_id")
+  title     String
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@index([createdAt])
+  @@map("note_revisions")
 }
