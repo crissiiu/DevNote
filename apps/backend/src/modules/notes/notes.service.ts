@@ -215,4 +215,66 @@ export class NotesService {
       message: "Note deleted successfully",
     };
   }
+
+  async search(userId: string, q:string) {
+    const keyword = q.trim();
+
+    if(!keyword) {
+      return {
+        message: "Notes fetched successfully",
+        data: []
+      };
+    }
+
+    const notes = await this.prisma.$queryRaw<
+      Array<{
+        id: string;
+        user_id: string;
+        title: string;
+        content: string;
+        is_pinned: boolean;
+        is_archived: boolean;
+        created_at: Date;
+        updated_at: Date;
+        rank: number;
+      }>
+    >`
+      SELECT
+        n.id,
+        n.user_id,
+        n.title,
+        n.content,
+        n.is_pinned,
+        n.is_archived,
+        n.created_at,
+        n.updated_at,
+        ts_rank(
+          to_tsvector('english', coalesce(n.title, '') || ' ' || coalesce(n.content, '')),
+          plainto_tsquery('english', ${keyword})
+        ) AS rank 
+        FROM notes n
+        WHERE 
+          n.user_id = ${userId}
+          AND n.is_archived = false
+          AND to_tsvector('english', coalesce(n.title,'') || ' ' || coalesce(n.content,''))
+            @@ plainto_tsquery('english', ${keyword})
+        ORDER BY rank DESC, n.updated_at DESC
+        LIMIT 20
+    `;
+
+    return {
+      message: "Notes search completed successfully",
+      data: notes.map((note) => ({
+        id: note.id,
+        userId: note.user_id,
+        title: note.title,
+        content: note.content,
+        isPinned: note.is_pinned,
+        isArchived: note.is_archived,
+        createdAt: note.created_at,
+        updatedAt: note.updated_at,
+        rank: note.rank
+      })),
+    };
+  }
 }

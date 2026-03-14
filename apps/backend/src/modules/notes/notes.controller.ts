@@ -15,6 +15,7 @@ import { CurrentUser } from "@/auth/current-user.decorator";
 import { CreateNoteDto } from "@/notes/dto/create-note.dto";
 import { QueryNotesDto } from "@/notes/dto/query-notes.dto";
 import { UpdateNoteDto } from "@/notes/dto/update-note.dto";
+import { SearchNotesDto } from "@/notes/dto/search-notes.dto";
 
 /**
  * Định nghĩa User type từ JWT payload để sử dụng trong controller.
@@ -44,7 +45,7 @@ export class NotesController {
   ) {
     return this.notesService.create(user.id, createNoteDto);
   }
-
+  
   /**
    * Lấy danh sách ghi chú (có phân trang/tìm kiếm).
    * [HttpGet]
@@ -55,6 +56,18 @@ export class NotesController {
     @Query() query: QueryNotesDto,
   ) {
     return this.notesService.findAll(user.id, query);
+  }
+
+  /**
+   * Tìm kiếm ghi chú theo từ khóa.
+   * [HttpGet("search")]
+   */
+  @Get("search")
+  async search(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: SearchNotesDto,
+  ) {
+    return this.notesService.search(user.id, query.q);
   }
 
   /**
