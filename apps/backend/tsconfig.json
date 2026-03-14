@@ -26,6 +26,9 @@
       ],
       "@/notes/*": [
         "src/modules/notes/*"
+      ],
+      "@/tags/*": [
+        "src/modules/tags/*"
       ]
     }
   }
