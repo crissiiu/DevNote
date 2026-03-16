@@ -33,3 +33,21 @@ export type CreateNoteResponse = {
     message: string;
     note: Note;
 }
+
+export type UpdateNoteRequest = {
+  title?: string;
+  content?: string;
+  isPinned?: boolean;
+  isArchived?: boolean;
+};
+
+export type UpdateNoteResponse = {
+  success: boolean;
+  message: string;
+  note: Note;
+};
+
+export type DeleteNoteResponse = {
+  success: boolean;
+  message: string;
+};
