@@ -4,15 +4,22 @@ if (!API_BASE_URL){
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
 }
 
+type ApiFetchOptions = RequestInit & {
+    token?: string | null;
+}
+
 export async function apiFetch<T>(
     path: string,
-    options?: RequestInit,
+    options?: ApiFetchOptions,
 ) : Promise<T> {
+    const { token, headers, ...restOptions } = options ?? {};
+
     const response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
+        ...restOptions,
         headers: {
             "Content-Type": "application/json",
-            ...(options?.headers ?? {}),
+            ...(token ? {Authorization: `Bearer ${token}`} : {}),
+            ...(headers ?? {}),
         },
     });
 
