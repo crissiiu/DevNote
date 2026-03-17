@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api/client";
 import { getAccessToken, removeAccessToken } from "@/lib/auth/token";
 import { ApiErrorResponse } from "@/lib/types/auth";
-import { DeleteNoteResponse, Note, NotesListResponse, UpdateNoteResponse } from "@/lib/types/note";
+import { DeleteNoteResponse, Note, NotesListResponse, SearchNotesResponse, UpdateNoteResponse } from "@/lib/types/note";
 import { useRouter } from "next/navigation";
 import { CreateNoteForm } from "@/components/create-note-form";
 import { NoteList, NoteListSkeleton } from "@/components/note-list";
 import { NoteEditor } from "@/components/note-editor";
+import { useDebounce } from "@/lib/hooks/use-debounce";
+import { NoteSearch } from "@/components/note-search";
+import { LogOut, Hash, LayoutGrid, AlertCircle, Bookmark } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function NotesPage() {
     const router = useRouter();
@@ -17,6 +21,10 @@ export default function NotesPage() {
     const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState("");
+    const [searchText, setSearchText] = useState("");
+    const [isSearching, setIsSearching] = useState(false);
+
+    const debouncedSearchText = useDebounce(searchText, 400);
 
     const activeNote = notes.find((note) => note.id === activeNoteId) ?? null;
 
@@ -38,27 +46,67 @@ export default function NotesPage() {
 
             setNotes(response.data);
             
-            // Auto-select first note if available
             if (response.data.length > 0 && !activeNoteId) {
                 setActiveNoteId(response.data[0].id);
             }
         } catch (error) {
-            const apiError = error as ApiErrorResponse;
-
-            if (apiError?.statusCode === 401) {
-                removeAccessToken();
-                router.push("/login");
-                return;
-            }
-
-            if (Array.isArray(apiError?.message)) {
-                setErrorMessage(apiError.message.join(", "));
-            } else {
-                setErrorMessage(apiError?.message || "Unable to load notes. Please try again later.");
-            }
+            handleApiError(error);
         } finally {
             setIsLoading(false);
         }
+    }
+
+    async function searchNotes(keyword: string) {
+        const token = getAccessToken();
+
+        if (!token) {
+            router.push("/login");
+            return;
+        }
+
+        try {
+            setErrorMessage("");
+            setIsSearching(true);
+
+            const response = await apiFetch<SearchNotesResponse>(
+                `/notes/search?q=${encodeURIComponent(keyword)}`,
+                {
+                    method: "GET",
+                    token,
+                },
+            );
+
+            setNotes(response.data);
+
+            if (response.data.length > 0) {
+                setActiveNoteId((current) => {
+                    const stillExists = response.data.some((note) => note.id === current);
+                    return stillExists ? current : response.data[0].id;
+                });
+            } else {
+                setActiveNoteId(null);
+            }
+        } catch (error) {
+            handleApiError(error);
+        } finally {
+            setIsSearching(false);
+        }
+    }
+  
+    function handleApiError(error: unknown) {
+        const apiError = error as ApiErrorResponse;
+
+        if (apiError?.statusCode === 401) {
+            removeAccessToken();
+            router.push("/login");
+            return;
+        }
+
+        const message = Array.isArray(apiError?.message) 
+            ? apiError.message.join(", ") 
+            : (apiError?.message || "Something went wrong. Please try again.");
+        
+        setErrorMessage(message);
     }
 
     async function handleCreateNote(input: {
@@ -82,6 +130,11 @@ export default function NotesPage() {
                 isPinned: input.isPinned
             }),
         });
+
+        if(debouncedSearchText.trim()) {
+            await searchNotes(debouncedSearchText);
+            return;
+        }
 
         const newNote = response.note ? response.note : response;
 
@@ -120,6 +173,11 @@ export default function NotesPage() {
             }),
         });
 
+        if(debouncedSearchText.trim()) {
+            await searchNotes(debouncedSearchText);
+            return;
+        }
+
         setNotes((prev) => {
             const updated = prev.map((note) => (note.id === input.id ? response.note : note));
             return updated.sort((a, b) => {
@@ -143,6 +201,11 @@ export default function NotesPage() {
             token,
         });
 
+        if (debouncedSearchText.trim()) {
+            await searchNotes(debouncedSearchText.trim());
+            return;
+        }
+
         setNotes((prev) => {
             const updated = prev.filter((note) => note.id !== id);
 
@@ -158,63 +221,100 @@ export default function NotesPage() {
         removeAccessToken();
         router.push("/login");
     }
+    
+    function handleClearSearch() {
+        setSearchText("");
+    }
 
     useEffect(() => {
         loadNotes();
     }, []);
 
+    useEffect(() => {
+        if(isLoading) {
+            return;
+        }
+
+        const keywords = debouncedSearchText.trim();
+        
+        if(!keywords){
+            loadNotes();
+            return;
+        }
+
+        searchNotes(keywords);
+    }, [debouncedSearchText]);
+
     return (
-        <main className="min-h-screen bg-[#FDFDFD] text-[#1A1A1A] font-sans overflow-x-hidden">
-            <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
-                <header className="mb-8 flex flex-col gap-4 border-b border-gray-100 pb-6 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-3xl font-black tracking-tight text-black sm:text-4xl">
-                            DevNotes<span className="text-gray-300">.</span>
-                        </h1>
-                        <p className="mt-1 text-sm font-medium text-gray-400">
-                            Your personal space for brilliant ideas.
-                        </p>
+        <main className="min-h-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/20 selection:text-primary">
+            <div className="mx-auto max-w-[1600px] px-6 py-8">
+                <header className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between animate-fade-in">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/25">
+                            <Bookmark className="h-6 w-6 text-primary-foreground" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-black tracking-tight lg:text-4xl text-foreground">
+                                DevNote<span className="text-primary">.</span>
+                            </h1>
+                            <p className="mt-1 text-sm font-medium text-muted-foreground">
+                                Your second brain for brilliant ideas.
+                            </p>
+                        </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="group inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-600 shadow-sm transition-all hover:bg-gray-50 hover:text-black focus:outline-none focus:ring-2 focus:ring-gray-100"
-                    >
-                        <svg className="mr-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Sign Out
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="group flex h-12 items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 text-sm font-bold text-foreground transition-all hover:bg-muted hover:border-primary/20"
+                        >
+                            <LogOut className="h-4 w-4 text-muted-foreground group-hover:text-destructive group-hover:translate-x-0.5 transition-all" />
+                            Sign Out
+                        </button>
+                    </div>
                 </header>
 
-                {errorMessage ? (
-                    <div className="mb-8 flex items-center rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-600 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
-                        <svg className="mr-3 h-5 w-5 shrink-0 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
+                {errorMessage && (
+                    <div className="mb-8 flex items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm font-semibold text-destructive animate-fade-in shadow-sm">
+                        <AlertCircle className="h-5 w-5 shrink-0 opacity-80" />
                         {errorMessage}
                     </div>
-                ) : null}
+                )}
 
-                <div className="grid h-[calc(100vh-180px)] min-h-[600px] items-start gap-8 overflow-hidden lg:grid-cols-[340px_380px_1fr]">
-                    {/* Column 1: Creation Form */}
-                    <aside className="h-full overflow-y-auto pr-2 custom-scrollbar">
-                        <CreateNoteForm onCreate={handleCreateNote} />
+                <div className="grid h-[calc(100vh-220px)] min-h-[600px] items-start gap-8 lg:grid-cols-[340px_400px_1fr]">
+                    <aside className="h-full flex flex-col space-y-6 overflow-hidden">
+                        <div className="flex items-center gap-2 px-1">
+                            <LayoutGrid className="h-4 w-4 text-primary" />
+                            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Workspace</h2>
+                        </div>
+                        <div className="overflow-y-auto pr-2 custom-scrollbar pb-4">
+                            <CreateNoteForm onCreate={handleCreateNote} />
+                        </div>
                     </aside>
 
-                    {/* Column 2: List of Notes */}
-                    <section className="flex h-full flex-col min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-gray-50/30 p-4">
-                        <div className="mb-4 flex items-center justify-between px-2">
-                            <h2 className="text-xl font-black text-black">Notes</h2>
-                            {!isLoading && notes.length > 0 && (
-                                <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-gray-400 shadow-sm border border-gray-100">
-                                    {notes.length} Total
-                                </span>
-                            )}
+                    <section className="flex h-full flex-col overflow-hidden rounded-[2.5rem] border border-border bg-card/40 p-2 shadow-sm">
+                        <div className="p-4 space-y-4">
+                            <div className="flex items-center justify-between px-2">
+                                <div className="flex items-center gap-2">
+                                    <Hash className="h-4 w-4 text-primary" />
+                                    <h2 className="text-sm font-black text-foreground">Notes</h2>
+                                </div>
+                                {!isLoading && notes.length > 0 && (
+                                    <span className="rounded-xl bg-primary/10 px-3 py-1 text-[11px] font-black text-primary border border-primary/10">
+                                        {notes.length} Total
+                                    </span>
+                                )}
+                            </div>
+                            <NoteSearch
+                                value={searchText}
+                                onChange={setSearchText}
+                                onClear={handleClearSearch}
+                                isSearching={isSearching}
+                            />
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto custom-scrollbar px-1">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pt-2">
                             {isLoading ? (
                                 <NoteListSkeleton />
                             ) : (
@@ -227,32 +327,20 @@ export default function NotesPage() {
                         </div>
                     </section>
 
-                    {/* Column 3: Editor */}
-                    <section className="h-full overflow-y-auto custom-scrollbar lg:pl-2">
-                        <NoteEditor 
-                            note={activeNote} 
-                            onSave={handleSave} 
-                            onDelete={handleDelete} 
-                        />
+                    <section className="h-full flex flex-col overflow-hidden">
+                        <div className="flex items-center gap-2 px-1 mb-4">
+                            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Editor</h2>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            <NoteEditor 
+                                note={activeNote} 
+                                onSave={handleSave} 
+                                onDelete={handleDelete} 
+                            />
+                        </div>
                     </section>
                 </div>
             </div>
-            
-            <style jsx global>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 4px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #E5E5E5;
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: #D1D1D1;
-                }
-            `}</style>
         </main>
     );
 }

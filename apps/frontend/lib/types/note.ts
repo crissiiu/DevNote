@@ -51,3 +51,13 @@ export type DeleteNoteResponse = {
   success: boolean;
   message: string;
 };
+
+export type SearchNote = Note & {
+  rank: number;
+}
+
+export type SearchNotesResponse = {
+    success: boolean;
+    message: string;
+    data: SearchNote[];
+};

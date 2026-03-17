@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { cn } from "@/lib/utils";
+import { Plus, Pin, Sparkles, Loader2 } from "lucide-react";
 
 type CreateNoteFormProps = {
     onCreate: (input: {
@@ -40,70 +42,80 @@ export function CreateNoteForm({ onCreate }: CreateNoteFormProps) {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="sticky top-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
-            <h2 className="text-xl font-bold text-gray-900">Create Note</h2>
-            <p className="mb-6 mt-1 text-sm text-gray-500">Jot down something important.</p>
-
-            <div className="space-y-5">
+        <form 
+            onSubmit={handleSubmit} 
+            className="sticky top-6 rounded-3xl border border-border bg-card p-6 shadow-sm shadow-primary/5 transition-all hover:shadow-md animate-fade-in"
+        >
+            <div className="flex items-center gap-3 mb-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <Sparkles className="h-5 w-5" />
+                </div>
                 <div>
-                    <label htmlFor="title" className="mb-1.5 block text-sm font-semibold text-gray-700">
+                    <h2 className="text-lg font-bold text-foreground leading-none">New Note</h2>
+                    <p className="mt-1 text-xs font-medium text-muted-foreground">Capture your thoughts.</p>
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <div className="space-y-1.5">
+                    <label htmlFor="title" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground ml-1">
                         Title
                     </label>
                     <input
                         id="title"
                         type="text"
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition-all focus:border-black focus:bg-white focus:ring-1 focus:ring-black"
+                        className="w-full h-12 rounded-2xl border border-border bg-muted/30 px-4 text-sm text-foreground outline-none transition-all focus:border-primary focus:bg-background focus:ring-4 focus:ring-primary/5 placeholder:text-muted-foreground/50 font-bold"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        placeholder="e.g. Weekly Meeting Notes"
+                        placeholder="e.g. Project Idea"
                         maxLength={200}
                         required
                     />
                 </div>
 
-                <div>
-                    <label htmlFor="content" className="mb-1.5 block text-sm font-semibold text-gray-700">
+                <div className="space-y-1.5">
+                    <label htmlFor="content" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground ml-1">
                         Content
                     </label>
                     <textarea
                         id="content"
-                        className="w-full min-h-[160px] resize-y rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition-all focus:border-black focus:bg-white focus:ring-1 focus:ring-black"
+                        className="w-full min-h-[160px] resize-none rounded-2xl border border-border bg-muted/30 px-4 py-3 text-sm text-foreground/80 outline-none transition-all focus:border-primary focus:bg-background focus:ring-4 focus:ring-primary/5 placeholder:text-muted-foreground/50 leading-relaxed"
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
-                        placeholder="Write your thoughts here..."
-                        maxLength={200}
+                        placeholder="Detail your thoughts here..."
                         required
                     />
                 </div>
 
-                <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 transition-colors hover:bg-gray-100">
-                    <input
-                        type="checkbox"
-                        checked={isPinned}
-                        className="h-4 w-4 cursor-pointer rounded border-gray-300 text-black focus:ring-black"
-                        onChange={(e) => setIsPinned(e.target.checked)}
-                    />
-                    <span className="text-sm font-medium text-gray-700">Pin this note</span>
-                </label>
+                <button
+                    type="button"
+                    onClick={() => setIsPinned(!isPinned)}
+                    className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all border w-fit",
+                        isPinned 
+                            ? "bg-primary text-primary-foreground border-primary" 
+                            : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
+                    )}
+                >
+                    <Pin className={cn("h-3.5 w-3.5", isPinned && "rotate-45")} />
+                    {isPinned ? "Pinned" : "Pin this"}
+                </button>
 
                 <div className="pt-2">
                     <button
                         type="submit"
                         disabled={isSubmitting || !title.trim() || !content.trim()}
-                        className="flex w-full items-center justify-center rounded-xl bg-black px-4 py-3.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-black"
+                        className="flex w-full items-center justify-center gap-2 h-14 rounded-2xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 hover:scale-[1.02] active:scale-[0.98]"
                     >
                         {isSubmitting ? (
-                            <>
-                                <svg className="mr-2 h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Creating...
-                            </>
-                        ) : "Create Note"}
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                            <Plus className="h-5 w-5" />
+                        )}
+                        {isSubmitting ? "Creating..." : "Create Note"}
                     </button>
                 </div>
             </div>
         </form>
     );
-}
+}
