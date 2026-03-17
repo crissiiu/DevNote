@@ -5,7 +5,8 @@ import { apiFetch } from "@/lib/api/client";
 import { setAccessToken } from "@/lib/auth/token";
 import { ApiErrorResponse, LoginResponse } from "@/lib/types/auth";
 import { useRouter } from "next/navigation";
-
+import { Mail, Lock, LogIn, Sparkles, AlertCircle, Bookmark } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -34,10 +35,10 @@ export default function LoginPage() {
         } catch (error) {
             const apiError = error as ApiErrorResponse;
 
-            if(Array.isArray(apiError.message)) {
+            if(Array.isArray(apiError?.message)) {
                 setErrorMessage(apiError.message.join(", "));
             } else {
-                setErrorMessage(apiError.message || "Login failed");
+                setErrorMessage(apiError?.message || "Login failed. Please check your credentials.");
             }
         } finally {
             setIsSubmitting(false);
@@ -45,59 +46,99 @@ export default function LoginPage() {
     }
 
     return (
-        <main className="flex min-h-screen items-center justify-center px-4" >
-            <div className="w-full max-w-md rounded-2xl border p-6 shadow-sm">
-                <h1 className="text-2xl font-bold">Login DevNote</h1>
-                <p className="mt-2 text-sm text-gray-600">Welcome back! Please enter your details.</p>
+        <main className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
+            {/* Background Orbs */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
 
-                <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                    <div>
-                        <label htmlFor="email" className="mb-1 block text-sm font-medium">
-                            Email
-                        </label>
+            <div className="w-full max-w-[440px] animate-fade-in relative z-10">
+                <div className="flex flex-col items-center mb-10 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-2xl shadow-primary/30 mb-6">
+                        <Bookmark className="h-8 w-8 text-primary-foreground" />
+                    </div>
+                    <h1 className="text-4xl font-black tracking-tight text-foreground">
+                        DevNote<span className="text-primary">.</span>
+                    </h1>
+                    <p className="mt-2 text-muted-foreground font-medium">
+                        Your second brain for brilliant ideas.
+                    </p>
+                </div>
 
-                        <input 
-                            id="email" 
-                            type="text"
-                            className="w-full rounded-lg border px-3 py-2 outline-none"
-                            value={email}
-                            onChange={(event) => setEmail(event.target.value)} 
-                            placeholder="sieu@example.com"
-                            required
-                        />
+                <div className="bg-card border border-border p-8 rounded-[2.5rem] shadow-xl shadow-primary/5">
+                    <div className="mb-8">
+                        <h2 className="text-xl font-bold text-foreground">Welcome Back</h2>
+                        <p className="text-sm text-muted-foreground mt-1">Sign in to your account to continue.</p>
                     </div>
 
-                    <div>
-                        <label htmlFor="password" className="mb-1 block text-sm font-medium">
-                            Password
-                        </label>
-
-                        <input 
-                            id="password" 
-                            type="password"
-                            className="w-full rounded-lg border px-3 py-2 outline-none"
-                            value={password}
-                            onChange={(event) => setPassword(event.target.value)} 
-                            placeholder="********"
-                            required
-                        />
-                    </div>
-
-                    {errorMessage ? (
-                        <div className="rounded-lg border border-red-200 bg-red-50 px-3 text-sm text-red-600">
-                            {errorMessage}
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="space-y-1.5">
+                            <label htmlFor="email" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground ml-1">
+                                Email Address
+                            </label>
+                            <div className="relative group">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
+                                    <Mail className="h-4 w-4" />
+                                </div>
+                                <input 
+                                    id="email" 
+                                    type="email"
+                                    className="w-full h-12 bg-muted/30 border border-border rounded-2xl pl-11 pr-4 text-sm text-foreground outline-none transition-all focus:border-primary focus:bg-background focus:ring-4 focus:ring-primary/5 font-medium"
+                                    value={email}
+                                    onChange={(event) => setEmail(event.target.value)} 
+                                    placeholder="sieu@example.com"
+                                    required
+                                />
+                            </div>
                         </div>
-                    ) : null}
 
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full rounded-lg bg-black px-4 py-2 text-white disabled:opacity-60">
-                            {isSubmitting ? "Logging in..." : "Login"}
+                        <div className="space-y-1.5">
+                            <label htmlFor="password" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground ml-1">
+                                Password
+                            </label>
+                            <div className="relative group">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
+                                    <Lock className="h-4 w-4" />
+                                </div>
+                                <input 
+                                    id="password" 
+                                    type="password"
+                                    className="w-full h-12 bg-muted/30 border border-border rounded-2xl pl-11 pr-4 text-sm text-foreground outline-none transition-all focus:border-primary focus:bg-background focus:ring-4 focus:ring-primary/5 font-medium"
+                                    value={password}
+                                    onChange={(event) => setPassword(event.target.value)} 
+                                    placeholder="••••••••"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {errorMessage && (
+                            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-destructive/5 border border-destructive/20 text-[13px] font-semibold text-destructive animate-fade-in">
+                                <AlertCircle className="h-4 w-4 shrink-0" />
+                                {errorMessage}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="w-full h-14 bg-primary text-primary-foreground rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:opacity-95 transition-all disabled:opacity-40 disabled:shadow-none hover:scale-[1.01] active:scale-[0.99] mt-4"
+                        >
+                            {isSubmitting ? (
+                                <Sparkles className="h-5 w-5 animate-pulse" />
+                            ) : (
+                                <LogIn className="h-5 w-5" />
+                            )}
+                            {isSubmitting ? "Authenticating..." : "Sign In"}
                         </button>
+                    </form>
 
-                </form>
+                    <div className="mt-8 pt-6 border-t border-border/60 text-center">
+                        <p className="text-[13px] text-muted-foreground">
+                            Don't have an account? <span className="text-primary font-bold cursor-pointer hover:underline">Get started</span>
+                        </p>
+                    </div>
+                </div>
             </div>
         </main>
     );
-}
+}
