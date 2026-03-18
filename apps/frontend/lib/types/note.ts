@@ -1,3 +1,17 @@
+export type Tag = {
+    id: string;
+    userId: string;
+    name: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export type NoteTag = {
+    noteId: string;
+    tagId: string;
+    tag: Tag;
+}
+
 export type Note = {
     id: string;
     userId: string;
@@ -7,6 +21,7 @@ export type Note = {
     isArchived: boolean;
     createdAt: string;
     updatedAt: string;
+    noteTags?: NoteTag[];
 };
 
 export type NotesListResponse = {

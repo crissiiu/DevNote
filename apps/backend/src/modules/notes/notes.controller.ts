@@ -78,7 +78,7 @@ export class NotesController {
   @Get(":id/revision")
   async findRevisions(
     @CurrentUser() user: AuthenticatedUser,
-    @Param(":id") id: string,
+    @Param("id") id: string,
   ) {
     return this.notesService.findRevisions(user.id, id);
   }
@@ -90,8 +90,8 @@ export class NotesController {
   @Get(":id/revision/:revisionId")
   async findRevisionDetail(
     @CurrentUser() user: AuthenticatedUser,
-    @Param(":id") noteId: string,
-    @Param(":revisionId") revisionId: string,
+    @Param("id") noteId: string,
+    @Param("revisionId") revisionId: string,
   ) {
     return this.notesService.findRevisionDetail(user.id, noteId, revisionId);
   }
@@ -119,6 +119,24 @@ export class NotesController {
     @Body() updateNoteDto: UpdateNoteDto,
   ) {
     return this.notesService.update(user.id, id, updateNoteDto);
+  }
+
+  @Post(":id/tags/:tagId")
+  async addTag(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Param("tagId") tagId: string,
+  ) {
+    return this.notesService.addTagToNote(user.id, id, tagId);
+  }
+
+  @Delete(":id/tags/:tagId")
+  async removeTag(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Param("tagId") tagId: string,
+  ) {
+    return this.notesService.removeTagFromNote(user.id, id, tagId);
   }
 
   /**

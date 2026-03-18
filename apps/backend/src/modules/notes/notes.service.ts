@@ -84,6 +84,27 @@ export class NotesService {
     }
   }
 
+  async removeTagFromNote(userId: string, noteId: string, tagId: string) {
+    const note = await this.prisma.note.findFirst({ where: { id: noteId, userId } });
+    
+    if (!note) {
+      throw new NotFoundException("Note not found");
+    }
+
+    await this.prisma.noteTag.delete({
+      where: {
+        noteId_tagId: {
+          noteId,
+          tagId,
+        }
+      }
+    });
+
+    return {
+      message: "Tag removed from note successfully",
+    }
+  }
+
   /**
    * Lấy danh sách ghi chú với phân trang và tìm kiếm.
    * Tương tự việc dùng LINQ kết hợp với .Skip().Take() trong .NET.
@@ -96,6 +117,15 @@ export class NotesService {
     // Xây dựng điều kiện lọc (Where clause)
     const where = {
       userId,
+      ...(query.tagId
+        ? {
+            noteTags: {
+              some: {
+                tagId: query.tagId,
+              },
+            },
+          }
+        : {}),
       ...(query.search
         ? {
             OR: [
@@ -122,6 +152,13 @@ export class NotesService {
         where,
         skip,
         take: limit,
+        include: {
+          noteTags: {
+            include: {
+              tag: true
+            }
+          }
+        },
         orderBy: {
           [query.sortBy ?? "updatedAt"]: query.sortOrder ?? "desc", 
         },
@@ -151,6 +188,13 @@ export class NotesService {
       where: {
         id,
         userId, // Đảm bảo người dùng không xem được ghi chú của người khác
+      },
+      include: {
+        noteTags: {
+          include: {
+            tag: true
+          }
+        }
       },
     });
 
@@ -222,7 +266,7 @@ export class NotesService {
     });
 
     return {
-      mesage: "Revisions fetched successfully",
+      message: "Revisions fetched successfully",
       data: revision,
     }
   }

@@ -11,6 +11,10 @@ export class QueryNotesDto {
   search?: string;
 
   @IsOptional()
+  @IsString()
+  tagId?: string;
+
+  @IsOptional()
   @Transform(({ value }) => Number(value)) // Chuyển string từ URL sang number
   @IsInt()
   @Min(1)

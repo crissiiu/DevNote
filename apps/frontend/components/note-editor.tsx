@@ -1,13 +1,14 @@
 "use client";
 
-import { Note } from "@/lib/types/note";
+import { Note, Tag } from "@/lib/types/note";
 import { FormEvent, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Save, Trash2, Pin, Clock, ChevronLeft } from "lucide-react";
+import { Save, Trash2, Pin, Clock, History, ChevronLeft, Hash, X, Plus } from "lucide-react";
 import { DeleteConfirmModal } from "./delete-confirm-modal";
 
 type NoteEditProps = {
     note: Note | null;
+    allTags: Tag[];
     onSave: (input: {
         id: string;
         title: string;
@@ -15,9 +16,22 @@ type NoteEditProps = {
         isPinned: boolean;
     }) => Promise<void>;
     onDelete: (id: string) => Promise<void>;
+    onShowHistory?: () => void;
+    onAddTag: (noteId: string, tagId: string) => Promise<void>;
+    onRemoveTag: (noteId: string, tagId: string) => Promise<void>;
+    onCreateTag: (name: string) => Promise<Tag>;
 };
 
-export function NoteEditor({ note, onSave, onDelete }: NoteEditProps) {
+export function NoteEditor({ 
+    note, 
+    allTags, 
+    onSave, 
+    onDelete, 
+    onShowHistory,
+    onAddTag,
+    onRemoveTag,
+    onCreateTag
+}: NoteEditProps) {
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [isPinned, setIsPinned] = useState(false);
@@ -104,6 +118,16 @@ export function NoteEditor({ note, onSave, onDelete }: NoteEditProps) {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {onShowHistory && (
+                            <button
+                                type="button"
+                                onClick={onShowHistory}
+                                className="p-2.5 rounded-xl text-muted-foreground hover:bg-muted transition-colors"
+                                title="View history"
+                            >
+                                <History className="h-5 w-5" />
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={() => setIsModalOpen(true)}
@@ -117,7 +141,7 @@ export function NoteEditor({ note, onSave, onDelete }: NoteEditProps) {
                 </div>
 
                 <div className="flex-1 flex flex-col p-6 lg:p-8 space-y-6 overflow-y-auto custom-scrollbar">
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                         <input
                             id="edit-title"
                             type="text"
@@ -128,6 +152,72 @@ export function NoteEditor({ note, onSave, onDelete }: NoteEditProps) {
                             maxLength={200}
                             required
                         />
+
+                        {/* Tags Management */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            {note.noteTags?.map((nt) => (
+                                <span 
+                                    key={nt.tagId}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-bold transition-all hover:bg-primary/20"
+                                >
+                                    <Hash className="h-3 w-3" />
+                                    {nt.tag.name}
+                                    <button 
+                                        type="button" 
+                                        onClick={() => onRemoveTag(note.id, nt.tagId)}
+                                        className="ml-1 hover:text-destructive transition-colors"
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </span>
+                            ))}
+                            
+                            <div className="relative group">
+                                <button
+                                    type="button"
+                                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-dashed border-border text-muted-foreground text-xs font-bold hover:border-primary/50 hover:text-primary transition-all"
+                                >
+                                    <Plus className="h-3 w-3" />
+                                    Add Tag
+                                </button>
+                                
+                                <div className="absolute top-full left-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-xl p-2 hidden group-focus-within:block z-50">
+                                    <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1">
+                                        {allTags
+                                            .filter(tag => !note.noteTags?.some(nt => nt.tagId === tag.id))
+                                            .map(tag => (
+                                                <button
+                                                    key={tag.id}
+                                                    type="button"
+                                                    onClick={() => onAddTag(note.id, tag.id)}
+                                                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-bold hover:bg-muted transition-colors flex items-center gap-2"
+                                                >
+                                                    <Hash className="h-3 w-3 opacity-50" />
+                                                    {tag.name}
+                                                </button>
+                                            ))
+                                        }
+                                        <div className="p-1 pt-2 border-t border-border mt-2">
+                                            <input 
+                                                className="w-full bg-muted/50 rounded-lg px-2 py-1.5 text-[10px] outline-none focus:ring-1 focus:ring-primary/30"
+                                                placeholder="Create new tag..."
+                                                onKeyDown={async (e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        const name = (e.target as HTMLInputElement).value.trim();
+                                                        if (name) {
+                                                            const newTag = await onCreateTag(name);
+                                                            await onAddTag(note.id, newTag.id);
+                                                            (e.target as HTMLInputElement).value = '';
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="flex-1 flex flex-col">
