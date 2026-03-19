@@ -7,12 +7,8 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Plus, 
-  Search, 
-  Settings, 
   LogOut, 
   Bookmark,
-  Clock,
-  Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
@@ -21,7 +17,6 @@ import { Tag } from "@/lib/types/note";
 
 interface SidebarProps {
   onLogout: () => void;
-  onSearchOpen?: () => void;
   onCreateNote: () => void;
   tags?: Tag[];
   activeTagId?: string | null;
@@ -31,7 +26,6 @@ interface SidebarProps {
 export function Sidebar({ 
   onLogout, 
   onCreateNote, 
-  onSearchOpen,
   tags = [], 
   activeTagId, 
   onSelectTag 

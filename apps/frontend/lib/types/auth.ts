@@ -14,6 +14,24 @@ export type LoginResponse = {
     };
 };
 
+export type RegisterRequest = {
+    email: string;
+    password: string;
+    displayName: string;
+}
+
+export type RegisterResponse = {
+    success: boolean;
+    message: string;
+    data: {
+        id: string;
+        email: string;
+        displayName?: string | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+}
+
 export type ApiErrorResponse = {
     success: boolean;
     statusCode: number;
